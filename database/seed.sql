@@ -1,7 +1,7 @@
 INSERT INTO shifts(name, start_time, end_time)
 VALUES
-('Fruehschicht', '06:00', '14:00'),
-('Spaetschicht', '14:00', '22:00');
+('Fruehschicht', '07:00', '13:21'),
+('Spaetschicht', '16:02', '20:00');
 
 INSERT INTO areas(name, description)
 VALUES

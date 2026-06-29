@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { pool } from './db';
 import employeesRoutes from './employees/employees.routes';
+import areasRoutes from './areas/areas.routes';
+import shiftsRoutes from './shifts/shifts.routes';
 
 dotenv.config();
 
@@ -12,6 +14,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/employees', employeesRoutes);
+
+app.use('/areas', areasRoutes);
+app.use('/shifts', shiftsRoutes);
 
 app.get('/', (req, res) => {
   res.send('Dienstplan Backend läuft');
