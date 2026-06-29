@@ -1,0 +1,15 @@
+# Abhängigkeiten (kann jeder mit npm install erzeugen)
+node_modules/
+
+# Geheime Umgebungsvariablen (Passwörter!) – niemals hochladen
+.env
+
+# Kompilierter Output
+dist/
+
+# Logs
+*.log
+
+# Betriebssystem-Dateien
+.DS_Store
+Thumbs.db
