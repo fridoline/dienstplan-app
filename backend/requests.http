@@ -1,0 +1,13 @@
+### Alle Dienste anzeigen
+GET http://localhost:5000/schedule
+
+### Neuen Dienst anlegen
+POST http://localhost:5000/schedule
+Content-Type: application/json
+
+{
+  "employee_id": 6,
+  "area_id": 7,
+  "shift_id": 6,
+  "work_date": "2026-07-12"
+}
