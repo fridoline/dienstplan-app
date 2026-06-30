@@ -23,21 +23,18 @@ function App() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
 
-  // Formularfelder
   const [employeeId, setEmployeeId] = useState('');
   const [areaId, setAreaId] = useState('');
   const [shiftId, setShiftId] = useState('');
   const [workDate, setWorkDate] = useState('');
   const [message, setMessage] = useState('');
 
-  // Dienstliste laden (eigene Funktion, damit wir sie nach dem Speichern erneut aufrufen können)
   function loadSchedule() {
     fetch(`${API}/schedule`)
       .then((res) => res.json())
       .then((data) => setEntries(data));
   }
 
-  // Beim ersten Laden: alle Daten holen
   useEffect(() => {
     loadSchedule();
     fetch(`${API}/employees`)
@@ -51,15 +48,12 @@ function App() {
       .then(setShifts);
   }, []);
 
-  // Dienst anlegen
   function handleSubmit() {
     setMessage('');
-
     if (!employeeId || !areaId || !shiftId || !workDate) {
       setMessage('Bitte alle Felder ausfüllen.');
       return;
     }
-
     fetch(`${API}/schedule`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,7 +69,46 @@ function App() {
         if (res.ok) {
           setMessage('✓ Dienst angelegt.');
           setWorkDate('');
-          loadSchedule(); // Liste aktualisieren
+          loadSchedule();
+        } else {
+          setMessage('Fehler: ' + data.message);
+        }
+      })
+      .catch(() => setMessage('Server nicht erreichbar.'));
+  }
+
+  // NEU: Dienst löschen, mit Sicherheitsabfrage
+  function handleDelete(id: number) {
+    const sicher = window.confirm('Diesen Dienst wirklich löschen?');
+    if (!sicher) return;
+
+    fetch(`${API}/schedule/${id}`, { method: 'DELETE' })
+      .then(async (res) => {
+        const data = await res.json();
+        if (res.ok) {
+          setMessage('✓ Dienst gelöscht.');
+          loadSchedule();
+        } else {
+          setMessage('Fehler: ' + data.message);
+        }
+      })
+      .catch(() => setMessage('Server nicht erreichbar.'));
+  }
+
+  // NEU: Schicht eines Dienstes ändern (per Auswahl)
+  function handleChangeShift(id: number, newShiftId: string) {
+    if (!newShiftId) return;
+
+    fetch(`${API}/schedule/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shift_id: Number(newShiftId) }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (res.ok) {
+          setMessage('✓ Dienst geändert.');
+          loadSchedule();
         } else {
           setMessage('Fehler: ' + data.message);
         }
@@ -84,7 +117,7 @@ function App() {
   }
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 700 }}>
+    <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 800 }}>
       <h1>Dienstplan</h1>
 
       <h2>Neuen Dienst anlegen</h2>
@@ -124,7 +157,6 @@ function App() {
           value={workDate}
           onChange={(e) => setWorkDate(e.target.value)}
         />
-
         <button onClick={handleSubmit}>Dienst speichern</button>
       </div>
 
@@ -134,14 +166,46 @@ function App() {
       {entries.length === 0 ? (
         <p>Noch keine Dienste vorhanden.</p>
       ) : (
-        <ul>
-          {entries.map((e) => (
-            <li key={e.id}>
-              {e.work_date.substring(0, 10)} – {e.first_name} {e.last_name}:{' '}
-              {e.shift_name} ({e.start_time}–{e.end_time}), {e.area_name}
-            </li>
-          ))}
-        </ul>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', borderBottom: '2px solid #ccc' }}>
+              <th style={{ padding: '6px' }}>Datum</th>
+              <th style={{ padding: '6px' }}>Mitarbeiterin</th>
+              <th style={{ padding: '6px' }}>Schicht</th>
+              <th style={{ padding: '6px' }}>Wohnbereich</th>
+              <th style={{ padding: '6px' }}>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e) => (
+              <tr key={e.id} style={{ borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: '6px' }}>{e.work_date}</td>
+                <td style={{ padding: '6px' }}>
+                  {e.first_name} {e.last_name}
+                </td>
+                <td style={{ padding: '6px' }}>
+                  {e.shift_name} ({e.start_time}–{e.end_time})
+                </td>
+                <td style={{ padding: '6px' }}>{e.area_name}</td>
+                <td style={{ padding: '6px' }}>
+                  {/* Schicht ändern per Auswahl */}
+                  <select
+                    defaultValue=""
+                    onChange={(ev) => handleChangeShift(e.id, ev.target.value)}
+                  >
+                    <option value="">Schicht ändern …</option>
+                    {shifts.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>{' '}
+                  <button onClick={() => handleDelete(e.id)}>Löschen</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

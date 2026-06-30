@@ -72,7 +72,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Einen Dienst ändern (Schicht und/oder Wohnbereich)
+// Einen Dienst ändern (Schicht und/oder Wohnbereich) – mit Protokoll
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const { area_id, shift_id } = req.body;
@@ -84,6 +84,19 @@ router.patch('/:id', async (req, res) => {
   }
 
   try {
+    // 1. Alten Zustand lesen (für das Protokoll)
+    const before = await pool.query(
+      'SELECT area_id, shift_id FROM schedule_entries WHERE id = $1',
+      [id]
+    );
+
+    if (before.rows.length === 0) {
+      return res.status(404).json({ message: 'Dienst nicht gefunden.' });
+    }
+
+    const alt = before.rows[0];
+
+    // 2. Änderung durchführen
     const result = await pool.query(
       `UPDATE schedule_entries
        SET area_id  = COALESCE($1, area_id),
@@ -93,35 +106,22 @@ router.patch('/:id', async (req, res) => {
       [area_id ?? null, shift_id ?? null, id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Dienst nicht gefunden.' });
-    }
+    const neu = result.rows[0];
 
-    res.json(result.rows[0]);
+    // 3. Änderung protokollieren
+    const oldValue = `area_id=${alt.area_id}, shift_id=${alt.shift_id}`;
+    const newValue = `area_id=${neu.area_id}, shift_id=${neu.shift_id}`;
+
+    await pool.query(
+      `INSERT INTO change_logs (schedule_entry_id, changed_by_employee_id, old_value, new_value)
+       VALUES ($1, $2, $3, $4)`,
+      [id, 6, oldValue, newValue] // Platzhalter-Admin, später echter Benutzer
+    );
+
+    res.json(neu);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Fehler beim Ändern des Dienstes' });
-  }
-});
-
-// Einen Dienst löschen
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const result = await pool.query(
-      'DELETE FROM schedule_entries WHERE id = $1 RETURNING *',
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Dienst nicht gefunden.' });
-    }
-
-    res.json({ message: 'Dienst gelöscht.', deleted: result.rows[0] });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Fehler beim Löschen des Dienstes' });
   }
 });
 
