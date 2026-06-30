@@ -6,11 +6,26 @@ import { pool } from '../db';
 const router = Router();
 
 // Alle Dienste auflisten
+// Alle Dienste auflisten – mit Namen statt IDs
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM schedule_entries ORDER BY work_date ASC, id ASC'
-    );
+    const result = await pool.query(`
+      SELECT
+        se.id,
+        se.work_date,
+        se.status,
+        e.first_name,
+        e.last_name,
+        a.name AS area_name,
+        s.name AS shift_name,
+        s.start_time,
+        s.end_time
+      FROM schedule_entries se
+      JOIN employees e ON e.id = se.employee_id
+      JOIN areas a ON a.id = se.area_id
+      JOIN shifts s ON s.id = se.shift_id
+      ORDER BY se.work_date ASC, s.start_time ASC
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error(error);
