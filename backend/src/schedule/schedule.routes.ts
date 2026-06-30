@@ -2,6 +2,7 @@
 
 import { Router } from 'express';
 import { pool } from '../db';
+import { requireAuth, requireAdmin } from '../auth/auth.middleware';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.get('/', async (req, res) => {
 });
 
 // Einen neuen Dienst anlegen
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
   const { employee_id, area_id, shift_id, work_date } = req.body;
 
   // 1. Prüfen, ob alle Felder da sind
@@ -73,7 +74,7 @@ router.post('/', async (req, res) => {
 });
 
 // Einen Dienst ändern (Schicht und/oder Wohnbereich) – mit Protokoll
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireAuth, requireAdmin, async (req: any, res) => {
   const { id } = req.params;
   const { area_id, shift_id } = req.body;
 
@@ -115,7 +116,7 @@ router.patch('/:id', async (req, res) => {
     await pool.query(
       `INSERT INTO change_logs (schedule_entry_id, changed_by_employee_id, old_value, new_value)
        VALUES ($1, $2, $3, $4)`,
-      [id, 6, oldValue, newValue] // Platzhalter-Admin, später echter Benutzer
+      [id, req.user.id, oldValue, newValue] // Platzhalter-Admin, später echter Benutzer
     );
 
     res.json(neu);
@@ -126,7 +127,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 // Einen Dienst löschen – mit Protokoll
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, requireAdmin, async (req: any, res) => {
   const { id } = req.params;
 
   try {
@@ -148,7 +149,7 @@ router.delete('/:id', async (req, res) => {
     await pool.query(
       `INSERT INTO change_logs (schedule_entry_id, changed_by_employee_id, old_value, new_value)
        VALUES ($1, $2, $3, $4)`,
-      [id, 6, oldValue, 'GELÖSCHT'] // 6 = Platzhalter-Admin, später echter Benutzer
+      [id, req.user.id, oldValue, 'GELÖSCHT'] // 6 = Platzhalter-Admin, später echter Benutzer
     );
 
     // 3. Dienst löschen
