@@ -125,4 +125,43 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
+// Einen Dienst löschen – mit Protokoll
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Dienst lesen (für das Protokoll), bevor er gelöscht wird
+    const before = await pool.query(
+      'SELECT area_id, shift_id FROM schedule_entries WHERE id = $1',
+      [id]
+    );
+
+    if (before.rows.length === 0) {
+      return res.status(404).json({ message: 'Dienst nicht gefunden.' });
+    }
+
+    const alt = before.rows[0];
+
+    // 2. Änderung protokollieren (Dienst existiert hier noch)
+    const oldValue = `area_id=${alt.area_id}, shift_id=${alt.shift_id}`;
+
+    await pool.query(
+      `INSERT INTO change_logs (schedule_entry_id, changed_by_employee_id, old_value, new_value)
+       VALUES ($1, $2, $3, $4)`,
+      [id, 6, oldValue, 'GELÖSCHT'] // 6 = Platzhalter-Admin, später echter Benutzer
+    );
+
+    // 3. Dienst löschen
+    const result = await pool.query(
+      'DELETE FROM schedule_entries WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    res.json({ message: 'Dienst gelöscht.', deleted: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Fehler beim Löschen des Dienstes' });
+  }
+});
+
 export default router;
