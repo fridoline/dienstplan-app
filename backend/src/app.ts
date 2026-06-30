@@ -6,6 +6,7 @@ import employeesRoutes from './employees/employees.routes';
 import areasRoutes from './areas/areas.routes';
 import shiftsRoutes from './shifts/shifts.routes';
 import scheduleRoutes from './schedule/schedule.routes';
+import authRoutes from './auth/auth.routes';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use('/employees', employeesRoutes);
 app.use('/areas', areasRoutes);
 app.use('/shifts', shiftsRoutes);
 app.use('/schedule', scheduleRoutes);
+app.use('/auth', authRoutes);
 
 app.get('/', (req, res) => {
   res.send('Dienstplan Backend läuft');
