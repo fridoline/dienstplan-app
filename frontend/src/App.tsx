@@ -144,6 +144,8 @@ function App() {
     );
   }
 
+  const istAdmin = currentUser?.role === 'ADMIN';
+
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 800 }}>
       {/* NEU: kleine Begrüßung mit Name und Rolle */}
@@ -151,48 +153,62 @@ function App() {
         Angemeldet als {currentUser?.first_name} {currentUser?.last_name} (
         {currentUser?.role})
       </p>
+      <button
+        onClick={() => {
+          setToken('');
+          setCurrentUser(null);
+        }}
+      >
+        Abmelden
+      </button>
 
       <h1>Dienstplan</h1>
+      {istAdmin && (
+        <>
+          <h2>Neuen Dienst anlegen</h2>
+          <div style={{ display: 'grid', gap: '8px', maxWidth: 350 }}>
+            <select
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+            >
+              <option value="">Mitarbeiterin wählen …</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.first_name} {e.last_name}
+                </option>
+              ))}
+            </select>
 
-      <h2>Neuen Dienst anlegen</h2>
-      <div style={{ display: 'grid', gap: '8px', maxWidth: 350 }}>
-        <select
-          value={employeeId}
-          onChange={(e) => setEmployeeId(e.target.value)}
-        >
-          <option value="">Mitarbeiterin wählen …</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.first_name} {e.last_name}
-            </option>
-          ))}
-        </select>
+            <select value={areaId} onChange={(e) => setAreaId(e.target.value)}>
+              <option value="">Wohnbereich wählen …</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
 
-        <select value={areaId} onChange={(e) => setAreaId(e.target.value)}>
-          <option value="">Wohnbereich wählen …</option>
-          {areas.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
+            <select
+              value={shiftId}
+              onChange={(e) => setShiftId(e.target.value)}
+            >
+              <option value="">Schicht wählen …</option>
+              {shifts.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
 
-        <select value={shiftId} onChange={(e) => setShiftId(e.target.value)}>
-          <option value="">Schicht wählen …</option>
-          {shifts.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="date"
-          value={workDate}
-          onChange={(e) => setWorkDate(e.target.value)}
-        />
-        <button onClick={handleSubmit}>Dienst speichern</button>
-      </div>
+            <input
+              type="date"
+              value={workDate}
+              onChange={(e) => setWorkDate(e.target.value)}
+            />
+            <button onClick={handleSubmit}>Dienst speichern</button>
+          </div>
+        </>
+      )}
 
       {message && <p style={{ marginTop: 10 }}>{message}</p>}
 
@@ -207,7 +223,7 @@ function App() {
               <th style={{ padding: '6px' }}>Mitarbeiterin</th>
               <th style={{ padding: '6px' }}>Schicht</th>
               <th style={{ padding: '6px' }}>Wohnbereich</th>
-              <th style={{ padding: '6px' }}>Aktionen</th>
+              {istAdmin && <th style={{ padding: '6px' }}>Aktionen</th>}
             </tr>
           </thead>
           <tbody>
@@ -221,20 +237,24 @@ function App() {
                   {e.shift_name} ({e.start_time}–{e.end_time})
                 </td>
                 <td style={{ padding: '6px' }}>{e.area_name}</td>
-                <td style={{ padding: '6px' }}>
-                  <select
-                    defaultValue=""
-                    onChange={(ev) => handleChangeShift(e.id, ev.target.value)}
-                  >
-                    <option value="">Schicht ändern …</option>
-                    {shifts.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>{' '}
-                  <button onClick={() => handleDelete(e.id)}>Löschen</button>
-                </td>
+                {istAdmin && (
+                  <td style={{ padding: '6px' }}>
+                    <select
+                      defaultValue=""
+                      onChange={(ev) =>
+                        handleChangeShift(e.id, ev.target.value)
+                      }
+                    >
+                      <option value="">Schicht ändern …</option>
+                      {shifts.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>{' '}
+                    <button onClick={() => handleDelete(e.id)}>Löschen</button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
