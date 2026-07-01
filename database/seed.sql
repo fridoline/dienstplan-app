@@ -11,6 +11,6 @@ VALUES
 
 INSERT INTO employees(first_name, last_name, email, password_hash, role)
 VALUES
-('Anna', 'Admin', 'admin@test.de', 'test123', 'ADMIN'),
+('Anna', 'Admin', 'anna@test.de', 'test123', 'EMPLOYEE'),
 ('Maria', 'Musterfrau', 'maria@test.de', 'test123', 'EMPLOYEE'),
 ('Leyla', 'Yilmaz', 'leyla@test.de', 'test123', 'EMPLOYEE');

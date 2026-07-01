@@ -4,7 +4,7 @@ import { requireAuth } from '../auth/auth.middleware';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM employees ORDER BY id ASC');
     res.json(result.rows);

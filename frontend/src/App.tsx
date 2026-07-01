@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Login, { type User } from './Login'; // NEU: Login + User-Typ
 
 type ScheduleEntry = {
   id: number;
@@ -18,6 +19,10 @@ type Shift = { id: number; name: string };
 const API = 'http://localhost:5000';
 
 function App() {
+  // NEU: Login-Zustand
+  const [token, setToken] = useState('');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   const [entries, setEntries] = useState<ScheduleEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
@@ -29,6 +34,11 @@ function App() {
   const [workDate, setWorkDate] = useState('');
   const [message, setMessage] = useState('');
 
+  // Baut den Authorization-Header mit dem Token
+  function authHeader() {
+    return { Authorization: `Bearer ${token}` };
+  }
+
   function loadSchedule() {
     fetch(`${API}/schedule`)
       .then((res) => res.json())
@@ -36,17 +46,22 @@ function App() {
   }
 
   useEffect(() => {
-    loadSchedule();
-    fetch(`${API}/employees`)
+    if (!token) return; // ohne Token nicht laden
+
+    fetch(`${API}/schedule`, { headers: authHeader() })
+      .then((res) => res.json())
+      .then((data) => setEntries(data));
+
+    fetch(`${API}/employees`, { headers: authHeader() })
       .then((r) => r.json())
       .then(setEmployees);
-    fetch(`${API}/areas`)
+    fetch(`${API}/areas`, { headers: authHeader() })
       .then((r) => r.json())
       .then(setAreas);
-    fetch(`${API}/shifts`)
+    fetch(`${API}/shifts`, { headers: authHeader() })
       .then((r) => r.json())
       .then(setShifts);
-  }, []);
+  }, [token]); // NEU: läuft erneut, sobald der Token da ist
 
   function handleSubmit() {
     setMessage('');
@@ -56,7 +71,7 @@ function App() {
     }
     fetch(`${API}/schedule`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify({
         employee_id: Number(employeeId),
         area_id: Number(areaId),
@@ -77,12 +92,14 @@ function App() {
       .catch(() => setMessage('Server nicht erreichbar.'));
   }
 
-  // NEU: Dienst löschen, mit Sicherheitsabfrage
   function handleDelete(id: number) {
     const sicher = window.confirm('Diesen Dienst wirklich löschen?');
     if (!sicher) return;
 
-    fetch(`${API}/schedule/${id}`, { method: 'DELETE' })
+    fetch(`${API}/schedule/${id}`, {
+      method: 'DELETE',
+      headers: authHeader(),
+    })
       .then(async (res) => {
         const data = await res.json();
         if (res.ok) {
@@ -95,13 +112,12 @@ function App() {
       .catch(() => setMessage('Server nicht erreichbar.'));
   }
 
-  // NEU: Schicht eines Dienstes ändern (per Auswahl)
   function handleChangeShift(id: number, newShiftId: string) {
     if (!newShiftId) return;
 
     fetch(`${API}/schedule/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify({ shift_id: Number(newShiftId) }),
     })
       .then(async (res) => {
@@ -116,8 +132,26 @@ function App() {
       .catch(() => setMessage('Server nicht erreichbar.'));
   }
 
+  // NEU: Weiche – wer nicht eingeloggt ist, sieht nur die Login-Maske
+  if (!token) {
+    return (
+      <Login
+        onLogin={(t, u) => {
+          setToken(t);
+          setCurrentUser(u);
+        }}
+      />
+    );
+  }
+
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 800 }}>
+      {/* NEU: kleine Begrüßung mit Name und Rolle */}
+      <p style={{ color: '#555' }}>
+        Angemeldet als {currentUser?.first_name} {currentUser?.last_name} (
+        {currentUser?.role})
+      </p>
+
       <h1>Dienstplan</h1>
 
       <h2>Neuen Dienst anlegen</h2>
@@ -188,7 +222,6 @@ function App() {
                 </td>
                 <td style={{ padding: '6px' }}>{e.area_name}</td>
                 <td style={{ padding: '6px' }}>
-                  {/* Schicht ändern per Auswahl */}
                   <select
                     defaultValue=""
                     onChange={(ev) => handleChangeShift(e.id, ev.target.value)}
